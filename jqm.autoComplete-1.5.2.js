@@ -38,6 +38,7 @@
 		forceFirstChoiceOnEnterKey : true,
 		transformResponse: null
 	},
+	
 	openXHR = {},
 	buildItems = function($this, data, settings) {
 		var str, tempArr, text, tempValue,
@@ -55,6 +56,7 @@
 					data = settings.dataHandler(data);
 				}
 				$.each(data, function(index, value) {
+					if( str.length > 10 ) return;
 					// are we working with objects or strings?
 					if ($.isPlainObject(value)) {
 						if(settings.transformResponse){
@@ -68,9 +70,94 @@
 						if( endPoint > 0 ) tempValue = value.substring(0, endPoint);
 						else tempValue = value;
 						
-						if(tempValue.length>0 && tempArr.indexOf(tempValue)<0) {
-							tempArr.push(tempValue);
-							str.push('<li ' + vclass + ' data-icon=' + settings.icon + '><a href="' + settings.link + encodeURIComponent(value) + '" data-transition="' + settings.transition + '">' + settings.labelHTML(tempValue) + '</a></li>');
+						var wordarray = tempValue.split(" ");
+						var arraylength = wordarray.length;
+						var lastWord = wordarray[arraylength-1];
+						lastWord = lastWord.replace("?","");
+						lastWord = lastWord.replace(".","");
+						lastWord = lastWord.replace("!","");
+						
+						var targetWord = lastWord;
+						
+//						var index = drugList.indexOf( lastWord );
+//						
+						var index;
+						var index1 = drugList.indexOf( lastWord );
+						var index2 = diseaseList.indexOf( lastWord );
+						var index3 = sideeffectList.indexOf( lastWord );
+						var index4 = targetList.indexOf( lastWord );
+						var List;
+						
+						index = Math.min(index1, index2, index3, index4);
+						
+						if (index1 > 0){
+							index = index1;
+							List = drugList;
+							
+						}else if (index2 > 0){
+							index = index2;
+							List = diseaseList;
+							
+						}else if (index3 > 0){
+							index = index3;
+							List = sideeffectList;
+							
+						}else if (index4 > 0){
+							index = index4;
+							List = targetList;
+						}
+						
+						
+						
+						var filterItems;
+						console.log(wordarray, arraylength, lastWord, targetWord, index);
+						console.log(endPoint, tempValue, index1, index2, index3, index4, lastWord);
+				
+						
+						
+						if( index > 0 ) {
+							wordarray = text.split(" ");
+							arraylength = wordarray.length;
+							
+							lastWord = wordarray[arraylength-1];
+							console.log(lastWord);
+							
+							filterItems = List.filter(function(element) {
+								var element_text;
+								var re;
+								// matching from start, or anywhere in the string?
+								re = new RegExp('^' + escape(lastWord), 'i');
+								
+								if ($.isPlainObject(element)) {
+									element_text = element.label;
+								} else {
+									element_text = element;
+								}
+								return re.test(element_text);
+							});
+						}
+						if( filterItems ) {
+							for( index = 0 ; index < filterItems.length && index < 100 ; index++ ) {
+								var compText;
+								var endPoint = value.indexOf(' ', text.lastIndexOf(" ") - 1);
+								
+								if( endPoint > 0 ) compText = value.substring(0, endPoint);
+								else compText = value;
+								
+								compText += " " + filterItems[index];
+								
+								if( tempArr.indexOf( compText )<0 ){
+									tempArr.push( compText );
+									str.push('<li ' + vclass + ' data-icon=' + settings.icon + '><a href="' + settings.link + encodeURIComponent(value) + '" data-transition="' + settings.transition + '">' + settings.labelHTML(compText) + '</a></li>');
+									var newtext = value.replace( targetWord, filterItems[index]);
+									settings.source.push(newtext);
+								}
+							}
+						} else {
+							if(tempValue.length>0 && tempArr.indexOf(tempValue)<0) {
+								tempArr.push(tempValue);
+								str.push('<li ' + vclass + ' data-icon=' + settings.icon + '><a href="' + settings.link + encodeURIComponent(value) + '" data-transition="' + settings.transition + '">' + settings.labelHTML(tempValue) + '</a></li>');
+							}
 						}
 					}
 				});
@@ -174,12 +261,17 @@
 					var escape = function( value ) { return value.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g, "\\$&"); };
 					data = settings.source.sort().filter(function(element) {
 						// matching from start, or anywhere in the string?
+						var endPoint = text.lastIndexOf(" ");
+						var tempText = text;
+						if( endPoint >= 0 )
+							tempText = tempText.substring(0, endPoint);
+						
 						if (settings.matchFromStart) {
 							// from start
-							element_text, re = new RegExp('^' + escape(text), 'i');
+							element_text, re = new RegExp('^' + escape(tempText), 'i');
 						} else {
 							// anywhere
-							element_text, re = new RegExp(escape(text), 'i');
+							element_text, re = new RegExp(escape(tempText), 'i');
 						}
 						if ($.isPlainObject(element)) {
 							element_text = element.label;
